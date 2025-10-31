@@ -3,18 +3,24 @@ import streamlit as st
 import requests
 import os
 
-# ====== دالة لجلب صورة الفيلم ======
+# ====== دالة لجلب صورة الفيلم من TMDB API ======
 def fetch_poster(movie_id):
     try:
         url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key=8265bd1679663a7ea12ac168da84d2e8&language=en-US"
-        data = requests.get(url).json()
+        response = requests.get(url, timeout=5)  # نضيف timeout = 5 ثواني
+        if response.status_code != 200:
+            return "https://via.placeholder.com/500x750?text=No+Image"
+        data = response.json()
         poster_path = data.get('poster_path')
         if poster_path:
             return "https://image.tmdb.org/t/p/w500/" + poster_path
         else:
             return "https://via.placeholder.com/500x750?text=No+Image"
-    except:
+    except requests.exceptions.Timeout:
+        return "https://via.placeholder.com/500x750?text=Timeout"
+    except Exception:
         return "https://via.placeholder.com/500x750?text=Error"
+
 
 # ====== دالة التوصيات ======
 def recommend(movie):
@@ -24,18 +30,25 @@ def recommend(movie):
         reverse=True,
         key=lambda x: x[1]
     )
+
     recommended_movie_names = []
     recommended_movie_posters = []
 
-    for i in distances[1:]:  # نأخذ كل النتائج
+    progress = st.progress(0)
+    total = min(100, len(distances[1:]))  # نحدّد 100 كحد أقصى علشان الأداء
+
+    for idx, i in enumerate(distances[1:total]):
         movie_id = movies.iloc[i[0]].movie_id
         recommended_movie_names.append(movies.iloc[i[0]].title)
         recommended_movie_posters.append(fetch_poster(movie_id))
+        progress.progress((idx + 1) / total)
 
+    progress.empty()
     return recommended_movie_names, recommended_movie_posters
 
 
 # ====== واجهة Streamlit ======
+st.set_page_config(page_title="Movie Recommender", page_icon="🎬", layout="wide")
 st.header('🎬 Movie Recommender System')
 
 # تحميل البيانات
@@ -55,6 +68,7 @@ if "num_movies" not in st.session_state:
 if "last_movie" not in st.session_state:
     st.session_state.last_movie = None
 
+
 # ====== زر التوصيات ======
 if st.button('Show Recommendation'):
     # لو المستخدم اختار فيلم جديد → نعيد التعيين
@@ -62,6 +76,7 @@ if st.button('Show Recommendation'):
         st.session_state.last_movie = selected_movie
         st.session_state.num_movies = 20
         st.session_state.recommended_movie_names, st.session_state.recommended_movie_posters = recommend(selected_movie)
+
 
 # ====== عرض النتائج ======
 if st.session_state.recommended_movie_names:

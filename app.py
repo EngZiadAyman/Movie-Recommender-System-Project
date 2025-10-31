@@ -7,7 +7,7 @@ import os
 def fetch_poster(movie_id):
     try:
         url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key=8265bd1679663a7ea12ac168da84d2e8&language=en-US"
-        response = requests.get(url, timeout=5)  # نضيف timeout = 5 ثواني
+        response = requests.get(url, timeout=5)
         if response.status_code != 200:
             return "https://via.placeholder.com/500x750?text=No+Image"
         data = response.json()
@@ -71,7 +71,6 @@ if "last_movie" not in st.session_state:
 
 # ====== زر التوصيات ======
 if st.button('Show Recommendation'):
-    # لو المستخدم اختار فيلم جديد → نعيد التعيين
     if st.session_state.last_movie != selected_movie:
         st.session_state.last_movie = selected_movie
         st.session_state.num_movies = 20
@@ -95,4 +94,4 @@ if st.session_state.recommended_movie_names:
     if num_to_show < total:
         if st.button("عرض المزيد 🎞️"):
             st.session_state.num_movies += 20
-            st.experimental_rerun()
+            st.rerun()
